@@ -4,8 +4,6 @@ from dotenv import load_dotenv
 from sqlalchemy import create_engine, Column, Integer, String,DateTime
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-
-
 # Load the variables from the .env file
 load_dotenv()
 
@@ -24,7 +22,7 @@ connection_string = (
     f"TrustServerCertificate=yes;"
 )
 
-params = urllib.parse.quote_plus(connection_string)
+params = urllib.parse.quote_plus(connection_string) # it used to generate DB Url along with encoding
 SQLALCHEMY_DATABASE_URL = f"mssql+pyodbc:///?odbc_connect={params}"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, pool_pre_ping=True)

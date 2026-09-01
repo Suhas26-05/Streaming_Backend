@@ -1,25 +1,148 @@
-from fastapi import FastAPI, Depends, HTTPException
-from sqlalchemy.orm import Session
-from sqlalchemy import text  # Import this to run raw SQL
-from database import get_db
-from pydantic import BaseModel
-from typing import Optional
-from datetime import datetime
+from contextlib import asynccontextmanager
 
-app = FastAPI()
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
+from database import engine, get_db, Base
+from schema import UserCreate, UserLogin
+from models import User
+from auth import hash_password, verify_password
+import crud
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("FastAPI application is starting...")
+
+    try:
+        # Test database connection
+        with engine.connect() as connection:
+            result = connection.execute(text("SELECT 1")).scalar()
+
+            if result == 1:
+                print("Successfully connected to SQL Server!")
+
+    except Exception as e:
+        print(f"Database connection failed: {e}")
+        raise
+
+    yield
+
+    # =========================
+    # SHUTDOWN
+    # =========================
+
+    print("FastAPI application is shutting down...")
+    engine.dispose()
+    print("Database connection pool closed.")
+
+Base.metadata.create_all(bind=engine)
+app = FastAPI(lifespan=lifespan)
+
+# Allow the local Vite frontend to complete JSON preflight and auth requests.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?$",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# =========================
+# HOME
+# =========================
 
 @app.get("/")
-def test_db_connection(db: Session = Depends(get_db)):
-    try:
-        # Run a simple query that doesn't need any tables to exist
-        result = db.execute(text("SELECT 1")).scalar()
-        
-        if result == 1:
-            return {"status": "success", "message": "Successfully connected to SQL Server!"}
-        
-    except Exception as e:
-        # If anything goes wrong, catch the error and show it
+def home():
+    return { "message": "FastAPI is running"}
+
+
+# =========================
+# SIGNUP
+# =========================
+
+@app.post("/signup")
+def signup(user: UserCreate, db: Session = Depends(get_db)):
+
+    # Check userId
+    existing_user = crud.get_user_by_user_id(db, user.userId)
+
+    if existing_user:
         raise HTTPException(
-            status_code=500, 
-            detail=f"Database connection failed! Error: {str(e)}"
+            status_code=400,
+            detail="User already exists"
         )
+
+    # Check email
+    existing_email = crud.get_user_by_email(db, user.email)
+
+    if existing_email:
+        raise HTTPException(
+            status_code=400,
+            detail="Email already exists"
+        )
+
+    # Hash password
+    hashed_password = hash_password(user.password)
+
+    # Create user object
+    new_user = User(
+        userId=user.userId,
+        username=user.username,
+        email=user.email,
+        password=hashed_password
+    )
+
+    # Save user
+    crud.create_user(db, new_user)
+
+    return {
+        "message": "User created successfully",
+        "userId": new_user.userId,
+        "username": new_user.username,
+        "email": new_user.email
+    }
+
+
+# =========================
+# LOGIN
+# =========================
+@app.post("/login")
+def login(
+    user: UserLogin,
+    db: Session = Depends(get_db)
+):
+
+    # Find user by userId
+    if user.userId is not None:
+        db_user = crud.get_user_by_user_id(db,user.userId)
+
+    # Find user by email
+    else:
+        db_user = crud.get_user_by_email(db,user.email)
+
+    # Check user
+    if db_user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid userId/email or password"
+        )
+
+    # Verify password
+    password_valid = verify_password(user.password,db_user.password)
+
+    if not password_valid:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid userId/email or password"
+        )
+
+    return {
+        "message": "Login successful",
+        "userId": db_user.userId,
+        "username": db_user.username,
+        "email": db_user.email
+    }
