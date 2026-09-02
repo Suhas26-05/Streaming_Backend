@@ -8,13 +8,14 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 load_dotenv()
 
 # Fetch parameters safely from the environment
+DRIVER = os.getenv('DB_DRIVER')
 SERVER = os.getenv("DB_SERVER")
 DATABASE = os.getenv("DB_DATABASE")
 USERNAME = os.getenv("DB_USERNAME")
 PASSWORD = os.getenv("DB_PASSWORD")
 
 connection_string = (
-    f"DRIVER={{ODBC Driver 17 for SQL Server}};"
+    f"DRIVER={DRIVER};"
     f"SERVER={SERVER};"
     f"DATABASE={DATABASE};"
     f"UID={USERNAME};"

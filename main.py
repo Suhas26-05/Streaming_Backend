@@ -6,7 +6,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from database import engine, get_db, Base
-from schema import UserCreate, UserLogin
+from schema import UserCreate, UserLogin, UserLogout
 from models import User
 from auth import hash_password, verify_password
 import crud
@@ -111,10 +111,7 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
 # LOGIN
 # =========================
 @app.post("/login")
-def login(
-    user: UserLogin,
-    db: Session = Depends(get_db)
-):
+def login(user: UserLogin,db: Session = Depends(get_db)):
 
     # Find user by userId
     if user.userId is not None:
@@ -139,10 +136,33 @@ def login(
             status_code=401,
             detail="Invalid userId/email or password"
         )
+    
+    session = crud.create_session(db,db_user.userId)
 
     return {
         "message": "Login successful",
+        "session_id": session.id,
         "userId": db_user.userId,
         "username": db_user.username,
         "email": db_user.email
+    }
+
+# =========================
+# LOGOUT
+# =========================
+@app.post("/logout")
+def logout(logout_data: UserLogout,db: Session = Depends(get_db)):
+
+    session = crud.logout_session(db,logout_data.session_id)
+
+    if session is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Active session not found"
+        )
+
+    return {
+        "message": "Logout successful",
+        "session_id": session.id,
+        "logout_time": session.logout_time
     }

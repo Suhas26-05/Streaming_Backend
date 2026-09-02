@@ -1,11 +1,11 @@
-from pydantic import BaseModel, Field, model_validator, field_validator
+from pydantic import BaseModel, EmailStr, Field, model_validator, field_validator
 
 
 class UserCreate(BaseModel):
 
     userId: str = Field(min_length=1, max_length=50)
     username: str = Field(min_length=1, max_length=50)
-    email: str = Field(min_length=1, max_length=100)
+    email: EmailStr = Field(min_length=1, max_length=100)
     password: str = Field(min_length=1)
 
 
@@ -22,7 +22,7 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
 
     userId: str | None = None
-    email: str | None = None
+    email: EmailStr | None = None
     password: str
 
     @field_validator("password")
@@ -44,3 +44,7 @@ class UserLogin(BaseModel):
             raise ValueError("Provide either username or email, not both")
 
         return self
+    
+class UserLogout(BaseModel):
+
+    session_id: int
