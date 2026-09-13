@@ -16,4 +16,4 @@ class UserLogin(BaseModel):
         return self
 
 class UserLogout(BaseModel):
-    session_id: int
+    session_token: str

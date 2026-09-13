@@ -21,21 +21,32 @@ def admin_signup(user: UserCreate, db: Session = Depends(get_db)):
     if all_crud.get_user_by_email(db, user.email): 
         raise HTTPException(status_code=400, detail="Email already exists")
     
+    new_user = User(
+        userId=user.userId, 
+        name=user.name, 
+        email=user.email, 
+        password_hash=hash_password(user.password), 
+        role=UserRole.ADMIN, 
+        profile_flag=False, 
+        updated_time=datetime.now()
+    )
+    
     try: 
-        return all_crud.create_user(db, User(userId=user.userId, name=user.username, email=user.email, password_hash=hash_password(user.password), role=UserRole.ADMIN, profile_flag=False, updated_time=datetime.now()))
+        return all_crud.create_user(db, new_user)
     except IntegrityError:
-        db.rollback(); raise HTTPException(status_code=400, detail="Admin already exists")
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Admin already exists")
 
 @router.post("/logout")
 def admin_logout(logout_data: UserLogout, db: Session = Depends(get_db)):
     
-    session = admin_crud.logout_admin_session(db, logout_data.session_id)
+    session = admin_crud.logout_admin_session(db, logout_data.session_token)
     
     if session is None: 
         raise HTTPException(status_code=404, detail="Active admin session not found")
     
     return {
         "message": "Admin logout successful", 
-        "session_id": session.id, 
+        "session_token": session.session_token, 
         "logout_time": session.logout_time
         }

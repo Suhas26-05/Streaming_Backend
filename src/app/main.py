@@ -21,7 +21,7 @@ async def lifespan(app: FastAPI):
     engine.dispose()
     print("Database connection pool closed.")
 
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(

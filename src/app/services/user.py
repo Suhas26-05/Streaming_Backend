@@ -48,8 +48,8 @@ def create_user_session(db: Session, user_id: str, profile_id: int):
     
     return session
 
-def logout_user_session(db: Session, session_id: int):
-    session = db.query(UserSession).filter(UserSession.id == session_id, UserSession.is_active == 1).first()
+def logout_user_session(db: Session, session_token: str):
+    session = db.query(UserSession).filter(UserSession.session_token == session_token, UserSession.is_active == 1).first()
     
     if session is None: 
         return None
@@ -60,3 +60,12 @@ def logout_user_session(db: Session, session_id: int):
     db.refresh(session)
     
     return session
+
+def delete_profile(db: Session, profile: Profile): 
+    
+    db.query(UserSession).filter(UserSession.profile_id == profile.id).update(
+        {UserSession.profile_id: None}
+    )
+    
+    db.delete(profile)
+    db.commit()

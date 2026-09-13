@@ -23,19 +23,22 @@ def signup(user: UserCreate, db: Session = Depends(get_db)):
     
     new_user = User(
         userId=user.userId, 
-        name=user.username, 
+        name=user.name, 
         email=user.email, 
         password_hash=hash_password(user.password),
         role=UserRole.USER,
-        profile_flag=False,
+        profile_flag=True,
         updated_time=datetime.now(),
         )
     
     try: 
-        return all_crud.create_user(db, new_user)
+        all_crud.create_user(db, new_user)
+        return {
+            "message": "User account is created"
+        }
     
     except IntegrityError:
-        db.rollback();
+        db.rollback()
         raise HTTPException(status_code=400, detail="User already exists")
 
 @router.post("/login")
@@ -58,9 +61,9 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         return {
             "message": "Admin login successful.", 
             "userId": db_user.userId, 
-            "username": db_user.name, 
+            "name": db_user.name, 
             "email": db_user.email,
-            "session_id": session.id
+            "session_token": session.session_token
             }
         
     profiles = user_crud.get_user_profiles(db, db_user.userId)
@@ -68,7 +71,7 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     return {
         "message": "Login successful. Select a profile to create a session.", 
         "userId": db_user.userId, 
-        "username": db_user.name, 
+        "name": db_user.name, 
         "email": db_user.email, 
         "profiles": [
             {"id": p.id, 

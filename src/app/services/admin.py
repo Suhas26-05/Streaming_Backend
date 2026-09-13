@@ -17,8 +17,10 @@ def create_admin_session(db: Session, admin_id: str):
     
     return session
 
-def logout_admin_session(db: Session, session_id: int):
-    session = db.query(AdminSession).filter(AdminSession.id == session_id, AdminSession.is_active == 1).first()
+def logout_admin_session(db: Session, session_token: str):
+    session = db.query(AdminSession).filter(
+        AdminSession.session_token == session_token, AdminSession.is_active == 1
+        ).first()
     if session is None: 
         return None
     

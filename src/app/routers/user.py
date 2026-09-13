@@ -22,19 +22,20 @@ def select_profile(user_id: str, profile: ProfileSelect, db: Session = Depends(g
     session = user_crud.create_user_session(db, user_id, selected.id)
     return {
         "message": "Profile selected and session created",
-        "session_id": session.id, "userId": session.userId,
+        "session_token": session.session_token, 
+        "userId": session.userId,
         "profile_id": session.profile_id
         }
     
 @router.post("/logout")
 def logout(logout_data: UserLogout, db: Session = Depends(get_db)):
-    session = user_crud.logout_user_session(db, logout_data.session_id)
+    session = user_crud.logout_user_session(db, logout_data.session_token)
     
     if session is None: 
         raise HTTPException(status_code=404, detail="Active session not found")
     return {
         "message": "Logout successful", 
-        "session_id": session.id,
+        "session_token": session.session_token,
         "logout_time": session.logout_time
         }
     
